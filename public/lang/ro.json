@@ -1600,6 +1600,7 @@
         "type": "Tip",
         "none": "Nimic",
         "fade": "Estompare",
+        "crossfade": "Fondu înlănțuit (crossfade)",
         "blur": "Blur",
         "scale": "Scară",
         "spin": "Învârtiți",

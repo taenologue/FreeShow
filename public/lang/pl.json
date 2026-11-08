@@ -1600,6 +1600,7 @@
         "type": "Typ",
         "none": "Brak",
         "fade": "Przebłysk",
+        "crossfade": "Przenikanie",
         "blur": "Rozmycie",
         "scale": "Skalowanie",
         "spin": "Obrót",

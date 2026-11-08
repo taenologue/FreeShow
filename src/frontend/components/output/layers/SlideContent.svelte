@@ -295,7 +295,8 @@
         if (currentTransition?.type === "none") currentTransition.duration = 0
 
         let currentTransitionDuration = transitionEnabled ? (itemTransitionDuration ?? currentTransition?.duration ?? 0) : 0
-        let waitToShow = currentTransitionDuration * ((currentTransition?.fadeInOffset ?? 50) / 100)
+        // crossfade: outgoing and incoming run at the same time (blended additively, so the total opacity stays 1)
+        let waitToShow = currentTransition?.type === "crossfade" ? 0 : currentTransitionDuration * ((currentTransition?.fadeInOffset ?? 50) / 100)
         const hasNoVisualTransition = currentTransitionDuration === 0 && !hasItemLevelTransition
 
         // Identify if any item or text content needs transitioning
@@ -511,46 +512,52 @@
             <!-- Keep outer item/box mounted across slides when its base properties match; transition inner text content if only lines changed -->
             {@const itemBox = getItemBase(item) || item}
             {@const boxChanged = !itemBoxesAreEqual(currentItems[index], currentSlide?.items?.[index])}
-            {#key `${boxChanged ? show : true}-${renderVersion}-${index}-${JSON.stringify(itemBox)}`}
-                {#if !boxChanged || show}
-                    <SlideItemTransition {preview} {transitionEnabled} {transitioningBetween} {isClearing} {incomingNeedsAutoSize} globalTransition={transition} item={itemBox} let:transition={boxTransition}>
-                        <Textbox
-                            backdropFilter={current.slideData?.["backdrop-filter"] || ""}
-                            chords={item.chords?.enabled}
-                            animationStyle={animationData.style || {}}
-                            item={timelineItems.get(`${current.outSlide?.id}-${current.outSlide?.layout}-${current.outSlide?.index}`)?.[index] || item}
-                            transition={boxTransition}
-                            textTransition={show || !boxChanged
-                                ? {
-                                      show,
-                                      renderVersion,
-                                      transitionEnabled,
-                                      transitioningBetween,
-                                      isClearing,
-                                      incomingNeedsAutoSize,
-                                      globalTransition: transition,
-                                      lines: current.lines,
-                                      currentLineId: current.outSlide?.id || currentLineId
-                                  }
-                                : null}
-                            {ratio}
-                            {outputId}
-                            ref={{ type: "show", showId: current.outSlide?.id, slideId: current.currentSlide?.id, id: current.currentSlide?.id || "", layoutId: current.outSlide?.layout, origin }}
-                            linesStart={getLineState(current.lines, current.outSlide, currentLineId)?.[item.lineReveal ? "linesStart" : "start"]}
-                            linesEnd={getLineState(current.lines, current.outSlide, currentLineId)?.[item.lineReveal ? "linesEnd" : "end"]}
-                            clickRevealed={!!getLineState(current.lines, current.outSlide, currentLineId)?.clickRevealed}
-                            outputStyle={current.currentStyle}
-                            {mirror}
-                            {preview}
-                            slideIndex={current.outSlide?.index}
-                            {styleIdOverride}
-                            autoSizeKey={createAutoSizeKey(item, index)}
-                            itemIndex={index}
-                            updateDynamicValues={!isClearing}
-                        />
-                    </SlideItemTransition>
-                {/if}
-            {/key}
+            {@const crossfade = currentTransition?.type === "crossfade"}
+            <!-- crossfade: isolate the outgoing/incoming pair so plus-lighter only adds the two layers together, not the background -->
+            <div class="transitionPair" class:isolate={crossfade}>
+                {#key `${boxChanged ? show : true}-${renderVersion}-${index}-${JSON.stringify(itemBox)}`}
+                    {#if !boxChanged || show}
+                        <SlideItemTransition {preview} {transitionEnabled} {transitioningBetween} {isClearing} {incomingNeedsAutoSize} blend={crossfade} globalTransition={transition} item={itemBox} let:transition={boxTransition}>
+                            <Textbox
+                                backdropFilter={current.slideData?.["backdrop-filter"] || ""}
+                                chords={item.chords?.enabled}
+                                animationStyle={animationData.style || {}}
+                                item={timelineItems.get(`${current.outSlide?.id}-${current.outSlide?.layout}-${current.outSlide?.index}`)?.[index] || item}
+                                transition={boxTransition}
+                                textTransition={show || !boxChanged
+                                    ? {
+                                          show,
+                                          renderVersion,
+                                          // crossfade: when the box itself changes, only the box fades (a second fade on the text inside would dip to t²)
+                                          transitionEnabled: transitionEnabled && !(crossfade && boxChanged),
+                                          blend: crossfade,
+                                          transitioningBetween,
+                                          isClearing,
+                                          incomingNeedsAutoSize,
+                                          globalTransition: transition,
+                                          lines: current.lines,
+                                          currentLineId: current.outSlide?.id || currentLineId
+                                      }
+                                    : null}
+                                {ratio}
+                                {outputId}
+                                ref={{ type: "show", showId: current.outSlide?.id, slideId: current.currentSlide?.id, id: current.currentSlide?.id || "", layoutId: current.outSlide?.layout, origin }}
+                                linesStart={getLineState(current.lines, current.outSlide, currentLineId)?.[item.lineReveal ? "linesStart" : "start"]}
+                                linesEnd={getLineState(current.lines, current.outSlide, currentLineId)?.[item.lineReveal ? "linesEnd" : "end"]}
+                                clickRevealed={!!getLineState(current.lines, current.outSlide, currentLineId)?.clickRevealed}
+                                outputStyle={current.currentStyle}
+                                {mirror}
+                                {preview}
+                                slideIndex={current.outSlide?.index}
+                                {styleIdOverride}
+                                autoSizeKey={createAutoSizeKey(item, index)}
+                                itemIndex={index}
+                                updateDynamicValues={!isClearing}
+                            />
+                        </SlideItemTransition>
+                    {/if}
+                {/key}
+            </div>
         {/if}
     {/if}
 {/each}
@@ -580,6 +587,17 @@
 {/if}
 
 <style>
+    .transitionPair {
+        display: contents;
+    }
+    .transitionPair.isolate {
+        display: block;
+        position: absolute;
+        inset: 0;
+        isolation: isolate;
+        pointer-events: none;
+    }
+
     /* park precompute textboxes far off-screen so they never flash during transitions */
     .autosize-precompute {
         position: absolute;

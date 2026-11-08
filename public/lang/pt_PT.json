@@ -1564,6 +1564,7 @@
         "type": "Tipo",
         "none": "Nenhum",
         "fade": "Desvanecer",
+        "crossfade": "Fusão (encadeado)",
         "blur": "Desfocar",
         "scale": "Escala",
         "spin": "Rodar",

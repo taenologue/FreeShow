@@ -19,6 +19,8 @@
     export let data: OutBackground
     export let transition: Transition
     export let fadingOut = false
+    // set by Background while it dissolves this layer itself
+    export let suppressOutro = false
     export let currentStyle: Styles | null = null
     export let animationStyle = ""
     export let mirror = false
@@ -35,9 +37,10 @@
 
     let mediaStyle: MediaStyle = {}
     $: if (data && currentStyle) mediaStyle = getMediaStyle({ ...$media[id], ...data }, currentStyle)
+    const instantTransition = { type: "none", duration: 0, easing: "linear" } as const
 </script>
 
-<OutputTransition {transition} inTransition={transition.in} outTransition={transition.out} on:outrostart={() => (fadingOut = true)}>
+<OutputTransition {transition} inTransition={transition.in} outTransition={suppressOutro ? instantTransition : transition.out} on:outrostart={() => (fadingOut = true)}>
     {#if type === "media"}
         <!-- on:ended={videoEnded} -->
         <Media {outputId} path={id} {data} {animationStyle} {mirror} {mediaStyle} {fadingOut} {layerable} on:loaded />

@@ -1640,6 +1640,7 @@
         "type": "Vrsta",
         "none": "Brez",
         "fade": "Izginjanje",
+        "crossfade": "Pretapljanje",
         "blur": "Zameglitev",
         "scale": "Prevelikostenje",
         "spin": "Vrtenje",

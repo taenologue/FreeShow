@@ -1640,6 +1640,7 @@
         "type": "Type",
         "none": "Aucun",
         "fade": "Effacement",
+        "crossfade": "Fondu enchaîné",
         "blur": "Flou",
         "scale": "Échelle",
         "spin": "Rotation",

@@ -944,6 +944,7 @@
         "type": "Tip",
         "none": "Ništa",
         "fade": "Preliv",
+        "crossfade": "Pretapanje",
         "blur": "Zamućenost",
         "scale": "Scale",
         "spin": "Spin",

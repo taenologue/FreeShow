@@ -1640,6 +1640,7 @@
         "type": "Tipo",
         "none": "Ninguno",
         "fade": "Desvanecer",
+        "crossfade": "Fundido encadenado (disolución)",
         "blur": "Desenfocar",
         "scale": "Escalar",
         "spin": "Rotar",

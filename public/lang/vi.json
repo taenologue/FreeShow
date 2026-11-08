@@ -1020,6 +1020,7 @@
         "type": "Loại",
         "none": "Không có",
         "fade": "Mờ dần",
+        "crossfade": "Hòa tan chéo (crossfade)",
         "blur": "Làm mờ",
         "scale": "Thu phóng",
         "spin": "Xoay",

@@ -1640,6 +1640,7 @@
         "type": "Typ",
         "none": "Žádné",
         "fade": "Mizení",
+        "crossfade": "Prolínačka (prolínání)",
         "blur": "Rozmázání",
         "scale": "Rozsah",
         "spin": "Točení",

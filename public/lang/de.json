@@ -1640,6 +1640,7 @@
         "type": "Typ",
         "none": "Kein",
         "fade": "Fade",
+        "crossfade": "Überblendung (Kreuzblende)",
         "blur": "Verwischen",
         "scale": "Skalieren",
         "spin": "Drehen",

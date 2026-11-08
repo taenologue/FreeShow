@@ -13,6 +13,8 @@
     // outgoing items hold for auto size delay while incoming content calculates font size
     export let incomingNeedsAutoSize = true
     export let preview = false
+    // additive blending for crossfade; only set where the parent isolates the outgoing/incoming pair
+    export let blend = false
     export let item: Item
     export let currentSlide: any = {}
     export let outSlide: any = {}
@@ -160,6 +162,7 @@
 {#each Object.entries(currentOut) as [id, transitioning] (id)}
     {@const outTransition = !transitionEnabled ? null : isClearing ? clearingOutTransition : getOutTransition(transitioning, incomingNeedsAutoSize, transitioningBetween)}
     <OutputTransition
+        {blend}
         inTransition={transitionEnabled ? transitioning.inTransition : null}
         {outTransition}
         on:outrostart={() => {

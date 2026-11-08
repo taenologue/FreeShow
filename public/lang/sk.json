@@ -1352,6 +1352,7 @@
         "type": "Typ",
         "none": "Žiadne",
         "fade": "Prelínanie",
+        "crossfade": "Prelínačka (prelínanie)",
         "blur": "Rozostrenia",
         "scale": "Zväčšenie",
         "spin": "Točenie",

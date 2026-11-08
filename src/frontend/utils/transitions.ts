@@ -1,18 +1,14 @@
-import { blur, crossfade, fade, fly, scale } from "svelte/transition"
+import { blur, fade, fly, scale } from "svelte/transition"
 import type { TransitionType } from "./../../types/Show"
 // import { quintInOut } from "svelte/easing"
 import { backInOut, bounceInOut, circInOut, cubicInOut, elasticInOut, linear, sineInOut } from "svelte/easing"
 import type { API_transition } from "../components/actions/api"
 import { transitionData } from "../stores"
 
-// https://stackoverflow.com/questions/70531875/svelte-crossfade-transition-between-pages
-// export const crossfade = cfade({})
-// export const [send, receive] = crossfade
-
 export const transitionTypes: { id: TransitionType; name: string }[] = [
     { id: "none", name: "transition.none" },
     { id: "fade", name: "transition.fade" },
-    // { id: "crossfade", name: "transition.crossfade" },
+    { id: "crossfade", name: "transition.crossfade" },
     { id: "blur", name: "transition.blur" },
     { id: "spin", name: "transition.spin" },
     { id: "scale", name: "transition.scale" },
@@ -23,7 +19,7 @@ export const transitions: { [key in TransitionType]: any } = {
     none: (node, data) => fade(node, { ...data, duration: 0 }),
     blur,
     fade,
-    crossfade,
+    crossfade: fade,
     fly,
     scale,
     // slide,
@@ -72,17 +68,21 @@ export const easings: any[] = [
 
 // : Transition
 export function custom(node: any, { type = "fade", duration = 500, easing = "sine", delay = 0, custom: customData = {} }: any) {
-    const customTransition = { ...transitions[type as TransitionType](node, customData), duration: type === "none" ? 0 : duration, easing: easings.find((a) => a.value === easing)?.function || linear, delay }
-    // if (type === "crossfade") customTransition.key = "a"
+    const customTransition = { ...(transitions[type as TransitionType] || fade)(node, customData), duration: type === "none" ? 0 : duration, easing: easings.find((a) => a.value === easing)?.function || linear, delay }
     return customTransition
 }
 
 export function updateTransition(data: API_transition) {
+    // API input: unknown type/easing or a non-numeric duration would break the output transition
+    const type = data.type && data.type in transitions ? data.type : "fade"
+    const duration = Number(data.duration ?? 500)
+    const easing = easings.some((a) => a.value === data.easing) ? data.easing! : "sine"
+
     transitionData.update((a) => {
-        a[data.id || "text"] = {
-            type: data.type || "fade",
-            duration: data.duration ?? 500,
-            easing: data.easing || "sine"
+        a[data.id === "media" ? "media" : "text"] = {
+            type,
+            duration: Number.isFinite(duration) && duration >= 0 ? duration : 500,
+            easing
         }
 
         return a

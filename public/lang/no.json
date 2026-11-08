@@ -1640,6 +1640,7 @@
         "type": "Type",
         "none": "Ingen",
         "fade": "Falme",
+        "crossfade": "Overtoning (crossfade)",
         "blur": "Uklart",
         "scale": "Skalere",
         "spin": "Spinn",

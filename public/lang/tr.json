@@ -1640,6 +1640,7 @@
         "type": "Tip",
         "none": "Hiçbiri",
         "fade": "Solma",
+        "crossfade": "Zincirleme geçiş (çapraz geçiş)",
         "blur": "Bulanık",
         "scale": "Ölçek",
         "spin": "Döndür",

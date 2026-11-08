@@ -1640,6 +1640,7 @@
         "type": "Type",
         "none": "Geen",
         "fade": "Vervagen",
+        "crossfade": "Overvloeier (crossfade)",
         "blur": "Vervagen",
         "scale": "Schalen",
         "spin": "Draaien",

@@ -1,6 +1,8 @@
 <script lang="ts">
+    import { onDestroy, tick } from "svelte"
     import type { Styles } from "../../../../types/Settings"
-    import type { OutBackground, Transition } from "../../../../types/Show"
+    import type { OutBackground, Transition, TransitionData } from "../../../../types/Show"
+    import { easings } from "../../../utils/transitions"
     import { clone } from "../../helpers/array"
     import BackgroundMedia from "./BackgroundMedia.svelte"
 
@@ -32,8 +34,32 @@
     let timeout: NodeJS.Timeout | null = null
     let tooRapid: NodeJS.Timeout | null = null
     let tryAgain = false
+
+    // crossfade (dissolve): both layers are animated together and blended additively, so there is no dip in between
+    let pendingDissolve: TransitionData | null = null
+    let dissolveQueued = false
+    let dissolving = false
+    let destroyed = false
+    let firstLayer: HTMLDivElement
+    let secondLayer: HTMLDivElement
+    let animations: Animation[] = []
+    const instantTransition = { type: "none", duration: 0, easing: "linear" } as const
+
+    onDestroy(() => {
+        destroyed = true
+        if (timeout) clearTimeout(timeout)
+        if (tooRapid) clearTimeout(tooRapid)
+        animations.forEach((animation) => animation.cancel())
+    })
+
     $: if (data) createBackground()
     function createBackground() {
+        // wait for the running dissolve to finish, then show the latest data
+        if (pendingDissolve || dissolving) {
+            dissolveQueued = true
+            return
+        }
+
         // prevent svelte bug creating multiple items if creating new while old clears
         if (tooRapid) {
             tryAgain = true
@@ -84,20 +110,29 @@
             return
         }
 
+        const isCrossfade = (transition.in || transition).type === "crossfade"
         const hasActiveBg = !!(background1 || background2)
-        const mountDelay = hasActiveBg ? duration / 4 + 20 : 0
+        const mountDelay = hasActiveBg && !isCrossfade ? duration / 4 + 20 : 0
         timeout = setTimeout(() => {
             loading = true
             let loadingFirst = !background1 // && background2?.path ? background2?.path !== data.path : background2?.id !== data.id
             currentlyLoadingFirst = loadingFirst
-            firstFadingOut = !loadingFirst
+
+            const previous = loadingFirst ? background2 : background1
+            const incoming = transition.in || transition
+            const outgoing = transition.out || transition
+            const canDissolve = previous && incoming.type === "crossfade" && outgoing.type === "crossfade" && Number.isFinite(incoming.duration) && incoming.duration > 0 && incoming.duration === outgoing.duration && incoming.easing === outgoing.easing
+            pendingDissolve = canDissolve ? clone(incoming) : null
+            if (!pendingDissolve) firstFadingOut = !loadingFirst
+            // the dissolve animates the layer itself, so the inner media must appear at once
+            const nextTransition = pendingDissolve ? { ...clone(transition), in: instantTransition } : clone(transition)
 
             if (loadingFirst) {
                 background1 = newData
-                transition1 = clone(transition)
+                transition1 = nextTransition
             } else {
                 background2 = newData
-                transition2 = clone(transition)
+                transition2 = nextTransition
             }
 
             // max loading time fallback
@@ -112,6 +147,14 @@
         if (!loading || currentlyLoadingFirst !== isFirst) return // media loaded, but probably fading out
 
         loading = false
+        if (pendingDissolve) {
+            const options = pendingDissolve
+            pendingDissolve = null
+            if (timeout) clearTimeout(timeout)
+            timeout = null
+            dissolve(isFirst, options)
+            return
+        }
         firstActive = isFirst
 
         // allow firstActive to trigger first
@@ -123,6 +166,53 @@
             }
             timeout = null
         })
+    }
+
+    function dissolve(isFirst: boolean, options: TransitionData) {
+        const incoming = isFirst ? firstLayer : secondLayer
+        const outgoing = isFirst ? secondLayer : firstLayer
+        const length = options.duration
+        const easing = easings.find(({ value }) => value === options.easing)?.function || ((value: number) => value)
+        const opacity = (time: number) => Math.min(1, Math.max(0, easing(time)))
+
+        dissolving = true
+        firstFadingOut = !isFirst
+        firstActive = isFirst
+
+        // opacity-only Web Animations run on the compositor (GPU); keyframes are sampled so any easing curve can be used
+        const steps = Math.min(1200, Math.ceil(length / 16.67))
+        const frames = Array.from({ length: steps + 1 }, (_, index) => opacity(index / steps))
+        animations = [
+            incoming.animate(
+                frames.map((value) => ({ opacity: value })),
+                { duration: length, fill: "both" }
+            ),
+            outgoing.animate(
+                frames.map((value) => ({ opacity: 1 - value })),
+                { duration: length, fill: "both" }
+            )
+        ]
+        void Promise.all(animations.map((animation) => animation.finished)).then(finish, () => {})
+
+        function finish() {
+            if (destroyed) return
+            outgoing.style.visibility = "hidden"
+            animations.forEach((animation) => animation.cancel())
+            animations = []
+            if (isFirst) background2 = null
+            else background1 = null
+
+            // remove the retired layer while its inner outro is still suppressed
+            void tick().then(() => {
+                if (destroyed) return
+                dissolving = false
+                incoming.style.visibility = ""
+                if (dissolveQueued) {
+                    dissolveQueued = false
+                    createBackground()
+                }
+            })
+        }
     }
 
     // don't remove data when clearing
@@ -149,20 +239,27 @@
     }
 </script>
 
-<div class="media" {style}>
+<div class="media" class:dissolving {style}>
     {#if background1}
-        <div class="media" class:hidden={!firstActive && (loading || noTransition)}>
-            <BackgroundMedia data={background1Data} fadingOut={firstFadingOut} {outputId} transition={transition1} {currentStyle} animationStyle={animation1} {mirror} on:loaded={() => loaded(true)} />
+        <div class="media layer" bind:this={firstLayer} class:hidden={!firstActive && (loading || noTransition)}>
+            <BackgroundMedia data={background1Data} fadingOut={firstFadingOut} suppressOutro={dissolving && !firstActive} {outputId} transition={transition1} {currentStyle} animationStyle={animation1} {mirror} on:loaded={() => loaded(true)} />
         </div>
     {/if}
     {#if background2}
-        <div class="media" class:hidden={firstActive && (loading || noTransition)}>
-            <BackgroundMedia data={background2Data} fadingOut={!firstFadingOut} {outputId} transition={transition2} {currentStyle} animationStyle={animation2} {mirror} on:loaded={() => loaded(false)} />
+        <div class="media layer" bind:this={secondLayer} class:hidden={firstActive && (loading || noTransition)}>
+            <BackgroundMedia data={background2Data} fadingOut={!firstFadingOut} suppressOutro={dissolving && firstActive} {outputId} transition={transition2} {currentStyle} animationStyle={animation2} {mirror} on:loaded={() => loaded(false)} />
         </div>
     {/if}
 </div>
 
 <style>
+    .dissolving {
+        isolation: isolate;
+    }
+    .dissolving > .layer {
+        mix-blend-mode: plus-lighter;
+    }
+
     .hidden {
         opacity: 0;
     }

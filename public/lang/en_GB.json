@@ -1640,6 +1640,7 @@
         "type": "Type",
         "none": "None",
         "fade": "Fade",
+        "crossfade": "Crossfade (Dissolve)",
         "blur": "Blur",
         "scale": "Scale",
         "spin": "Spin",

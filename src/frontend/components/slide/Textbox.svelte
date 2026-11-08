@@ -517,7 +517,6 @@
             const verseItemText = allText.filter((a) => a.customType?.includes("disableTemplate")) || []
             const verseItemSize = Number(getStyles(verseItemText[0]?.style, true)?.["font-size"] || "") || 0
             customTypeRatio = verseItemSize / 100 || 1
-
             ;({ defaultFontSize, maxFontSize } = getAutoSizeOptions(textFit, itemFontSize, isTextboxItem))
         }
 
@@ -830,10 +829,10 @@
 >
     {#if lines && !noTextMode}
         {#if textTransition}
-            <div class="textTransitionContainer">
+            <div class="textTransitionContainer" class:isolate={textTransition.blend}>
                 {#key `${textTransition.show}-${textTransition.renderVersion}-${itemIndex}`}
                     {#if textTransition.show}
-                        <SlideItemTransition {preview} transitionEnabled={textTransition.transitionEnabled} transitioningBetween={textTransition.transitioningBetween} isClearing={textTransition.isClearing} incomingNeedsAutoSize={textTransition.incomingNeedsAutoSize} globalTransition={textTransition.globalTransition} item={{ ...item, autoFontSize: hasAutoSize ? fontSize || item?.autoFontSize : 0 }} lines={textTransition.lines} let:customItem let:customLines>
+                        <SlideItemTransition {preview} blend={!!textTransition.blend} transitionEnabled={textTransition.transitionEnabled} transitioningBetween={textTransition.transitioningBetween} isClearing={textTransition.isClearing} incomingNeedsAutoSize={textTransition.incomingNeedsAutoSize} globalTransition={textTransition.globalTransition} item={{ ...item, autoFontSize: hasAutoSize ? fontSize || item?.autoFontSize : 0 }} lines={textTransition.lines} let:customItem let:customLines>
                             <TextboxLines
                                 item={customItem}
                                 {slideIndex}
@@ -973,5 +972,9 @@
         position: relative;
         width: 100%;
         height: 100%;
+    }
+    /* crossfade: plus-lighter only adds the outgoing and incoming text together */
+    .textTransitionContainer.isolate {
+        isolation: isolate;
     }
 </style>

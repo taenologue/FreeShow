@@ -1640,6 +1640,7 @@
         "type": "Típus",
         "none": "Nincs",
         "fade": "Elhalványulás",
+        "crossfade": "Áttűnés",
         "blur": "Elmosás",
         "scale": "Méretezés",
         "spin": "Forgás",
